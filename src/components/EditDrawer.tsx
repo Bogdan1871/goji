@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import {
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage
 } from '@/components/ui/form';
+import { QueryClient, useMutation, useQuery } from '@tanstack/react-query';
 
 const schema = z.object({
   name: z.string().min(1, 'Required'),
@@ -19,7 +20,13 @@ const schema = z.object({
 
 type GroceryForm = z.infer<typeof schema>;
 
-const EditDrawer = () => {
+type EditDrawerProps = {
+  queryClient: QueryClient
+}
+
+const EditDrawer: FC<EditDrawerProps> = ({
+  queryClient
+}) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const closeDrawer = () => navigate('/');
@@ -32,27 +39,36 @@ const EditDrawer = () => {
     },
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data } = await axios.get(`/groceries/${id}`);
-        form.reset(data);
-      } catch {
-        toast.error('Failed to load item');
-        navigate('/');
-      }
-    };
-    fetchData();
-  }, [id]);
+  const { data, refetch } = useQuery({
+    queryKey: ['drawerDetails', [id]],
+    queryFn: async () => {
+      const { data } = await axios.get(`/groceries/${id}`);
 
-  const onSubmit = async (data: GroceryForm) => {
-    try {
+      return data;
+    }
+  })
+
+  useEffect(() => {
+    form.reset(data);
+  }, [data]);
+
+  const { mutateAsync: updateGroceryitem } = useMutation({
+    mutationFn: async (data: GroceryForm) => {
       await axios.put(`/groceries/${id}`, data);
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['groceries'] })
       toast.success('Item updated');
       navigate('/');
-    } catch {
+    },
+    onError: () => {
       toast.error('Update failed');
     }
+  })
+
+  const onSubmit = async (data: GroceryForm) => {
+    updateGroceryitem(data)
   };
 
   return (
@@ -93,7 +109,7 @@ const EditDrawer = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full mt-12">Update</Button>
+              <Button type="submit" className="w-full mt-12 cursor-pointer">Update</Button>
             </form>
           </Form>
         </div>

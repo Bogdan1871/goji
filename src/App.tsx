@@ -8,8 +8,16 @@ import axios from "axios";
 import { Grocery } from "./pages/Grocery";
 import AddNewDrawer from "./components/AddNewDrawer";
 import EditDrawer from "./components/EditDrawer";
+import { QueryClient } from "@tanstack/react-query";
+import { FC } from "react";
 
-function App() {
+type AppProps = {
+  queryClient: QueryClient
+}
+
+const App: FC<AppProps> = ({
+  queryClient
+}) => {
   axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 
   const token = localStorage.getItem('token');
@@ -23,8 +31,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/" element={<Grocery />}>
-              <Route path="add" element={<AddNewDrawer/>} />
-              <Route path=":id" element={<EditDrawer />} />
+              <Route path="add" element={<AddNewDrawer queryClient={queryClient} />} />
+              <Route path=":id" element={<EditDrawer queryClient={queryClient} />} />
             </Route>
           </Route>
         </Route>

@@ -9,6 +9,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from "./ui/input";
+import { QueryClient, useMutation } from "@tanstack/react-query";
 
 const schema = z.object({
   name: z.string().min(1, 'Required'),
@@ -18,7 +19,13 @@ const schema = z.object({
 
 type GroceryForm = z.infer<typeof schema>;
 
-const AddNewDrawer: FC = () => {
+type AddNewDrawerProps = {
+  queryClient: QueryClient
+}
+
+const AddNewDrawer: FC<AddNewDrawerProps> = ({
+  queryClient
+}) => {
   const navigate = useNavigate();
   const closeDrawer = () => navigate('/');
 
@@ -31,15 +38,22 @@ const AddNewDrawer: FC = () => {
     },
   });
 
-  const onSubmit = async (data: GroceryForm) => {
-    try {
+  const { mutateAsync: createNewItem } = useMutation({
+    mutationFn: async (data: GroceryForm) => {
       await axios.post('/groceries', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groceries'] })
       toast.success('Item added');
       navigate('/');
-    } catch (err) {
-      console.log(err);
+    },
+    onError: () => {
       toast.error('Failed to add item');
     }
+  })
+
+  const onSubmit = async (data: GroceryForm) => {
+    createNewItem(data);
   };
 
   return (

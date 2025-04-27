@@ -6,14 +6,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { FC } from 'react';
 import { loginSchema, LoginSchema } from '@/lib/validators/login';
 
 const Login: FC = () => {
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -24,15 +22,7 @@ const Login: FC = () => {
   });
 
   const onSubmit = async (data: LoginSchema) => {
-    try {
-      await login(data.username, data.password);
-      toast.success('Login successful!');
-      form.reset();
-      navigate('/');
-    } catch (error) {
-      console.log(error);
-      toast.error('Login failed. Please check your credentials.');
-    }
+    await login(data);
   };
 
   return (

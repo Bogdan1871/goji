@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useMutation, keepPreviousData, useQuery } from '@tanstack/react-query';
 
 export interface GroceryItem {
   _id: string;
@@ -12,11 +13,8 @@ export interface GroceryItem {
 }
 
 const useGrocery = () => {
-  const [groceries, setGroceries] = useState<GroceryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -28,66 +26,66 @@ const useGrocery = () => {
 
   const clearSelection = () => setSelectedIds([]);
 
-  const markOutOfStock = async () => {
-    if (!selectedIds.length) return;
-  
-    try {
+  const { mutateAsync: markOutOfStock } = useMutation({
+    mutationFn: async () => {
       await axios.put('/groceries', {
         filter: { _id: { $in: selectedIds } },
         update: { inStock: false },
       });
+    },
+    onSuccess: () => {
       toast.success(`${selectedIds.length} items marked as out of stock`);
       clearSelection();
       fetchGroceries();
-    } catch (err) {
-      toast.error('Failed to mark items out of stock +' + err);
-    }
-  };
+    },
+    onError: () => {
+      toast.error('Failed to mark items out of stock');
+    },
+  })
 
-  const markInStock = async () => {
-    if (!selectedIds.length) return;
-  
-    try {
+  const { mutateAsync: markInStock } = useMutation({
+    mutationFn: async () => {
       await axios.put('/groceries', {
         filter: { _id: { $in: selectedIds } },
         update: { inStock: true },
       });
-      toast.success(`${selectedIds.length} items marked as out of stock`);
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.length} items marked as in stock`);
       clearSelection();
       fetchGroceries();
-    } catch (err) {
-      toast.error('Failed to mark items out of stock: ' + err);
-    }
-  };
+    },
+    onError: () => {
+      toast.error('Failed to mark items in stock');
+    },
+  })
 
-  const fetchGroceries = async () => {
-    setLoading(true);
-    try {
+  const { data: groceries, isLoading, refetch: fetchGroceries } = useQuery({
+    queryKey: ['groceries', { page, search, limit }],
+    queryFn: async () => {
       const res = await axios.get('/groceries', {
         params: { page, limit, search },
       });
-      setGroceries(res.data?.items || []);
-      setTotal(res.data?.total || 0);
-    } catch (error) {
-      console.error('Failed to fetch groceries', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      return res.data;
+    },
+    initialData: keepPreviousData,
+    placeholderData: keepPreviousData,
+  });
 
   useEffect(() => {
     fetchGroceries();
   }, [page, search]);
 
   return {
-    groceries,
+    groceries: groceries?.items || [],
     page,
     setPage,
     search,
     limit,
     setSearch,
-    loading,
-    total,
+    loading: isLoading,
+    total: groceries?.total || 0,
     selectedIds,
     toggleSelect,
     clearSelection,

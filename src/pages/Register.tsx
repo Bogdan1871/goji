@@ -7,12 +7,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Register = () => {
   const { register: registerUser } = useAuth();
-  const navigate = useNavigate();
 
   const form = useForm<AuthSchema>({
     resolver: zodResolver(authSchema),
@@ -23,16 +21,8 @@ const Register = () => {
     },
   });
 
-  const onSubmit = async (data: AuthSchema) => {
-    try {
-      await registerUser(data.username, data.password);
-      toast.success('Registration successful!');
-      form.reset();
-      navigate('/login');
-    } catch (error) {
-      console.log(error);
-      toast.error('Registration failed. Username may already be taken.');
-    }
+  const onSubmit = async ({username, password}: AuthSchema) => {
+    await registerUser({username, password});
   };
 
   return (
